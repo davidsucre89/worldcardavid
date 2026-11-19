@@ -1,0 +1,135 @@
+API DE CUENTAS
+==============
+
+Todas las rutas usan el prefijo /accounts. Los endpoints que reciben un cuerpo
+esperan JSON con Content-Type: application/json.
+
+REGISTRO
+--------
+POST /accounts/register
+Pública. Registra una cuenta inactiva con el rol existente "Cliente" y envía un
+correo de bienvenida con el enlace de activación. El token vence en 24 horas.
+
+Cuerpo requerido:
+{
+  "email": "persona@example.com",
+  "password": "una-clave-segura",
+  "username": "persona",
+  "person": {}
+}
+
+El email debe ser válido y tener hasta 120 caracteres. La contraseña debe tener
+hasta 72 bytes UTF-8. El username debe tener entre 1 y 15 caracteres, y person
+debe ser un objeto JSON.
+
+Se requiere que exista un rol llamado "Cliente". El envío de correo requiere
+EMAIL_ADMIN, EMAIL_ADMIN_PASSWORD y SMTP_HOST. SMTP_PORT es opcional (por defecto
+587); SMTP_SECURE es opcional (por defecto true si el puerto es 465).
+
+ACTIVACIÓN
+----------
+GET /accounts/activate?token=<token>
+Pública. Activa la cuenta con el token de un solo uso enviado por correo.
+Responde 400 si el token es inválido, ya fue usado o venció.
+
+LISTADO
+-------
+GET /accounts
+Requiere Authorization: Bearer <JWT> de una cuenta activa con rol "Admin".
+JWT_SECRET debe estar configurado. Devuelve las cuentas, incluido su rol, sin
+contraseñas ni datos del token de activación.
+
+CONSULTA POR ID
+---------------
+GET /accounts/:id
+Requiere el mismo JWT de administrador que el listado. Devuelve la cuenta y su
+rol, sin contraseñas ni datos del token de activación. Responde 404 si no existe.
+
+ACTUALIZACIÓN
+-------------
+PATCH /accounts/:id
+Requiere JWT de administrador. Se pueden enviar uno o más de estos campos:
+email, username, person, password y role_id.
+
+Ejemplo:
+{
+  "username": "nuevo-nombre",
+  "person": {}
+}
+
+Para cambiar el email se necesita la configuración de correo. La cuenta queda
+inactiva hasta verificar la nueva dirección mediante el enlace enviado por
+correo. La contraseña se vuelve a cifrar al actualizarla.
+
+ELIMINACIÓN
+-----------
+DELETE /accounts/:id
+Requiere JWT de administrador. Elimina la cuenta indicada y responde HTTP 204
+sin cuerpo. No se permite que el administrador elimine su propia cuenta.
+
+ERRORES
+-------
+400: parámetros inválidos, cuerpo de actualización vacío o token de activación
+     inválido/vencido.
+401: falta un JWT válido o la cuenta del JWT no está activa.
+403: la cuenta del JWT no tiene rol "Admin".
+404: la cuenta solicitada no existe.
+409: conflicto con un valor único, normalmente un email ya registrado.
+500: error interno o fallo de base de datos.
+502: la cuenta quedó pendiente de activación, pero no se pudo enviar el correo.
+503: falta configuración de correo/JWT_SECRET o no existe el rol "Cliente"
+     requerido para registrar.
+
+API DE ROLES
+============
+
+Todas las rutas usan el prefijo /roles y requieren
+Authorization: Bearer <JWT> de una cuenta activa con rol "Admin". JWT_SECRET
+debe estar configurado.
+El seed crea los roles "Admin", "Vendedor" y "Cliente".
+Ejecuta `npm run db:seed` para insertarlos. `npm run db:undo` elimina esos roles
+en una transacción y falla sin borrarlos si alguna cuenta está asignada a ellos.
+
+CREACIÓN
+--------
+POST /roles
+Requiere name (cadena de hasta 30 caracteres) y menu (cualquier valor JSON
+distinto de null). description es opcional; si se envía, debe ser una cadena
+de hasta 100 caracteres o null. isActive se crea en false por defecto y puede
+activarse posteriormente con PATCH /roles/:id.
+
+Ejemplo:
+{
+  "name": "Cliente",
+  "description": "Usuario regular",
+  "menu": []
+}
+
+LISTADO Y CONSULTA
+------------------
+GET /roles
+Devuelve todos los roles.
+
+GET /roles/:id
+Devuelve el rol solicitado o responde 404 si no existe.
+
+ACTUALIZACIÓN
+-------------
+PATCH /roles/:id
+Acepta uno o más de estos campos: name, description, menu y isActive. isActive
+debe ser booleano (true o false). Los límites y restricciones de los otros
+campos son los mismos que al crear un rol. Responde 404 si no existe.
+
+ELIMINACIÓN
+-----------
+DELETE /roles/:id
+Elimina el rol y responde HTTP 204 sin cuerpo. Responde 409 si hay cuentas
+asignadas a ese rol.
+
+ERRORES DE ROLES
+----------------
+400: ID o campos inválidos.
+401/403/503: autenticación inválida, rol distinto de "Admin" o falta JWT_SECRET.
+404: rol inexistente.
+409: nombre duplicado o el rol está asignado a cuentas.
+500: error interno o fallo de base de datos.
