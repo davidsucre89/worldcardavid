@@ -10,7 +10,7 @@ const roles = [
     description: "Vendedor",
     menu: [],
     isActive: true,
-  },
+  }, 
   {
     name: "Cliente",
     description: "Cliente",
