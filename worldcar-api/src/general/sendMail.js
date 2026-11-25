@@ -1,5 +1,6 @@
 import "dotenv/config";
 import nodemailer from "nodemailer";
+import { createWelcomeEmailTemplate } from "../config/email/emailTemplates.js";
 
 export function validateEmailConfiguration() {
   const { EMAIL_ADMIN, EMAIL_ADMIN_PASSWORD, SMTP_HOST } = process.env;
@@ -63,13 +64,10 @@ export async function sendWelcomeEmail(account, activationLink) {
     throw new Error("A registered account with email and username is required");
   }
 
-  const activationMessage = activationLink
-    ? `\n\nPara activar tu cuenta, abre este enlace: ${activationLink}`
-    : "";
+  const message = createWelcomeEmailTemplate(account.username, activationLink);
 
   return sendEmail({
     to: account.email,
-    subject: "¡Bienvenido a Worldcar!",
-    text: `Hola ${account.username},\n\n¡Te damos la bienvenida a Worldcar! Tu cuenta ha sido registrada correctamente.${activationMessage}`,
+    ...message,
   });
 }

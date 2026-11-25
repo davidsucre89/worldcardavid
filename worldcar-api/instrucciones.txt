@@ -25,6 +25,9 @@ debe ser un objeto JSON.
 Se requiere que exista un rol llamado "Cliente". El envío de correo requiere
 EMAIL_ADMIN, EMAIL_ADMIN_PASSWORD y SMTP_HOST. SMTP_PORT es opcional (por defecto
 587); SMTP_SECURE es opcional (por defecto true si el puerto es 465).
+ACTIVATION_BASE_URL es la URL base de la API usada en el enlace del correo
+(por ejemplo, http://localhost:3400 en desarrollo). En producción debe ser la
+URL pública de la API.
 
 ACTIVACIÓN
 ----------
